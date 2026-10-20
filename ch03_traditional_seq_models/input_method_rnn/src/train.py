@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter  # 写入器
 # 加进度条
 from tqdm import tqdm
 import time
+from tokenizer import JiebaTokenizer
 
 
 # 定义引擎函数，训练一个epoch，返回平均损失
@@ -41,13 +42,11 @@ def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # 2.定义数据加载器
     train_loader = get_dataloader()
-    # 3.获取词表
-    with open(MODEL_DIR / VOCAB_FILE, 'r', encoding='utf-8') as f:
-        # 读取每一行
-        vocab_list = [token.strip() for token in f.readlines()]
-        # print(len(vocab_list))
+    # 3.获取词表,创建分词器
+    tokenizer = JiebaTokenizer.from_vocab(MODEL_DIR / VOCAB_FILE)
+
     # 4.定义模型
-    model = InputMethodRNNModel(vocab_size=len(vocab_list)).to(device)
+    model = InputMethodRNNModel(vocab_size=tokenizer.vocab_size).to(device)
     # 5.定义损失函数
     loss = nn.CrossEntropyLoss()
     # 6.定义优化器
@@ -69,6 +68,7 @@ def train():
             torch.save(model.state_dict(), MODEL_DIR / BEST_MODEL)
             print("模型保存成功！")
     writer.close()
+
 
 if __name__ == "__main__":
     train()

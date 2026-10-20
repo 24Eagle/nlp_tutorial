@@ -7,6 +7,7 @@ from config import *
 from model import InputMethodRNNModel
 from dataset import get_dataloader
 from predict import predict_topk  # 预测核心逻辑，得到topk的id列表
+from tokenizer import JiebaTokenizer
 
 
 # 验证逻辑，返回评价指标，(top1和top5准确率)
@@ -39,12 +40,10 @@ def run_evaluate():
     # 1.确定设备
     device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
     # 2.获取词表
-    with open(MODEL_DIR / VOCAB_FILE, 'r', encoding='utf-8') as f:
-        # 读取每一行
-        vocab_list = [token.strip() for token in f.readlines()]
+    tokenizer = JiebaTokenizer.from_vocab(MODEL_DIR / VOCAB_FILE)
     print("词表加载成功")
     # 3.加载模型
-    model = InputMethodRNNModel(vocab_size=len(vocab_list)).to(device)
+    model = InputMethodRNNModel(vocab_size=tokenizer.vocab_size).to(device)
     model.load_state_dict(torch.load(MODEL_DIR / BEST_MODEL))
     print("模型加载成功")
 

@@ -6,14 +6,14 @@ import jieba
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+from tokenizer import JiebaTokenizer
 from config import *
 
 
 # 构建数据集的函数，传入原始语料和词表word2id,返回{‘input’：{ids},'target':id}
-def build_dataset(sentences, word2id):
+def build_dataset(sentences, tokenizer):
     # 1.将所有句子进行分词，id化
-    sentences_id = [[word2id.get(token, 0) for token in jieba.lcut(sentence)] for sentence in sentences]
+    sentences_id = [tokenizer.encode(sentence) for sentence in sentences]
     # 2.构建input和target组成的dataset
     # 字典构成的列表
     dataset = []
@@ -45,21 +45,12 @@ def preprocess():
     train_sentences, test_sentences = train_test_split(sentences, test_size=0.2)
     # print(len(train_sentences))
     # 4.针对训练集分词，构建词表
-    vocab_set = set()  # 利用集合做Token去重
-    for sentence in train_sentences:
-        vocab_set.update(jieba.lcut(sentence))
-    # 转换成列表，（词表，id2word）,还要考虑未登录词
-    vocab_list = [UNK_TOKEN] + list(vocab_set)
-    # print(len(vocab_list))
-    word2id = {word: id for id, word in enumerate(vocab_list)}
-    # print(len(word2id))
-    print("词表大小：", len(vocab_list))
-    # 5.保存词表到文件
-    with open(MODEL_DIR / VOCAB_FILE, "w", encoding="utf-8") as f:
-        f.write('\n'.join(vocab_list))
+    JiebaTokenizer.build_vocab(train_sentences, MODEL_DIR / VOCAB_FILE)
+    # 5.创建分词器
+    tokenizer = JiebaTokenizer.from_vocab(MODEL_DIR / VOCAB_FILE)
     # 6.构建数据集
-    train_dataset = build_dataset(train_sentences, word2id)
-    test_dataset = build_dataset(test_sentences, word2id)
+    train_dataset = build_dataset(train_sentences, tokenizer)
+    test_dataset = build_dataset(test_sentences, tokenizer)
 
     # 7.保存数据集到文件
     pd.DataFrame(train_dataset).to_json(PROCESSED_DATA_DIR / TRAIN_DATA_FILE, orient='records', lines=True)

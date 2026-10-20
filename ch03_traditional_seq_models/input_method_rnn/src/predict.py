@@ -6,6 +6,7 @@ import torch
 import jieba
 from config import *
 from model import InputMethodRNNModel
+from tokenizer import JiebaTokenizer
 
 
 def predict_topk(model, input, k=5):
@@ -29,19 +30,17 @@ def predict_topk(model, input, k=5):
     return top_indices.tolist()  # 转换成列表返回
 
 
-def predict(text, model, id2word, word2id, k, device):
+def predict(text, model, tokenizer, k, device):
     # 4.准备数据，文本处理
-    # 4.1分词
-    tokens = jieba.lcut(text)
-    # 4.2id化
-    ids = [word2id.get(token, word2id.get(UNK_TOKEN)) for token in tokens]
+    # 4.1分词,id化
+    ids = tokenizer.encode(text)
     # 4.3转换为tensor，作为输入
     input = torch.tensor([ids], dtype=torch.long).to(device)
     # 5.核心预测逻辑
     # 5.1前向传播，得到topk的id列表
     top_indices_list = predict_topk(model, input, k=k)
     # 5.2将id列表转换成token列表
-    top_tokens = [id2word[id] for id in top_indices_list[0]]
+    top_tokens = [tokenizer.id2word[id] for id in top_indices_list[0]]
     return top_tokens
 
 
@@ -49,14 +48,10 @@ def run_predict():
     # 1.确定设备
     device = torch.device('cuda' if torch.cuda.is_available() else "cpu")
     # 2.获取词表
-    with open(MODEL_DIR / VOCAB_FILE, 'r', encoding='utf-8') as f:
-        # 读取每一行
-        vocab_list = [token.strip() for token in f.readlines()]
-    id2word = {id: word for id, word in enumerate(vocab_list)}
-    word2id = {word: id for id, word in enumerate(vocab_list)}
+    tokenizer = JiebaTokenizer.from_vocab(MODEL_DIR / VOCAB_FILE)
     print("词表加载成功")
     # 3.加载模型
-    model = InputMethodRNNModel(vocab_size=len(vocab_list)).to(device)
+    model = InputMethodRNNModel(vocab_size=tokenizer.vocab_size).to(device)
     model.load_state_dict(torch.load(MODEL_DIR / BEST_MODEL))
     print("模型加载成功")
 
@@ -73,7 +68,7 @@ def run_predict():
             continue
         input_history += user_input
         # 预测tokens
-        top_indices = predict(input_history, model, id2word, word2id, 5, device)
+        top_indices = predict(input_history, model, tokenizer, 5, device)
         print("预测结果：", top_indices)
 
 
