@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# 虚拟环境
+venv/
+.venv/
+
+# 大数据/日志/模型，不传仓库
+data/
+logs/
+models/
+*.bz2
+*.vec
+*.bin
+*.pth
+*.pt
+*.ckpt
